@@ -1,128 +1,161 @@
-// Global champion lists
-let championPool = [];
-let filteredPool = [];
+// -------------------------
+// Draft sequence & state
+// -------------------------
+const draftSequence = [
+    { action: 'BAN',  team: 'B', slot: 'B1'    },
+    { action: 'BAN',  team: 'R', slot: 'R1'    },
+    { action: 'BAN',  team: 'B', slot: 'B2'    },
+    { action: 'BAN',  team: 'R', slot: 'R2'    },
+    { action: 'BAN',  team: 'B', slot: 'B3'    },
+    { action: 'BAN',  team: 'R', slot: 'R3'    },
+    { action: 'PICK', team: 'B', slot: 'B1'    },
+    { action: 'PICK', team: 'R', slot: 'R1'    },
+    { action: 'PICK', team: 'R', slot: 'R2'    },
+    { action: 'PICK', team: 'B', slot: 'B2'    },
+    { action: 'PICK', team: 'B', slot: 'B3'    },
+    { action: 'PICK', team: 'R', slot: 'R3'    },
+    { action: 'BAN',  team: 'B', slot: 'B1-2'  },
+    { action: 'BAN',  team: 'R', slot: 'R1-2'  },
+    { action: 'BAN',  team: 'B', slot: 'B2-2'  },
+    { action: 'BAN',  team: 'R', slot: 'R2-2'  },
+    { action: 'PICK', team: 'R', slot: 'R1-2'  },
+    { action: 'PICK', team: 'B', slot: 'B1-2'  },
+    { action: 'PICK', team: 'B', slot: 'B2-2'  },
+    { action: 'PICK', team: 'R', slot: 'R2-2'  }
+];
+let championList   = [];
+let filteredPool   = [];
+let seriesRef      = null;
+let unsubscribe    = null;
 
-// Wait until the DOM is fully loaded
+// -------------------------
+// DOM Ready
+// -------------------------
 document.addEventListener('DOMContentLoaded', () => {
-    // 1) Extract game ID from URL
-    const urlParams     = new URLSearchParams(window.location.search);
-    const gameId        = urlParams.get('game');
-    const gameIdDisplay = document.getElementById('game-id-display');
+    // 1) Grab Game ID & Series ref
+    const params   = new URLSearchParams(window.location.search);
+    const gameId   = params.get('game');
+    if (!gameId) return alert('No game ID in URL!');
 
-    if (gameId && gameIdDisplay) {
-        gameIdDisplay.innerText = `Game ID: ${gameId}`;
-    }
+    // Display it & wire up Copy-ID
+    document.getElementById('game-id-display').innerText = `Game ID: ${gameId}`;
+    setupCopyButton(gameId);
 
-    // 2) Copy-to-clipboard button
-    const copyBtn = document.getElementById('copy-id-btn');
-    if (copyBtn) {
-        if (gameId) {
-            copyBtn.addEventListener('click', () => {
-                console.log('Copy button clicked, copying:', gameId);
-                if (navigator.clipboard && window.isSecureContext) {
-                    navigator.clipboard.writeText(gameId)
-                        .then(() => {
-                            copyBtn.innerText = 'Copied!';
-                            setTimeout(() => { copyBtn.innerText = '📋 Copy ID'; }, 1500);
-                        })
-                        .catch(err => {
-                            console.error('Clipboard API failed', err);
-                            fallbackCopyText(gameId, copyBtn);
-                        });
-                } else {
-                    fallbackCopyText(gameId, copyBtn);
-                }
-            });
-        } else {
-            console.error('No game ID to copy.');
-            copyBtn.disabled = true;
-        }
-    } else {
-        console.error('Copy ID button not found.');
-    }
+    // 2) Point at your Firestore series doc
+    seriesRef = db.collection('series').doc(gameId);
 
-    // 3) Load champions from JSON
+    // 3) Fetch champion list
     fetch('champions.json')
-        .then(res => {
-            if (!res.ok) throw new Error(`HTTP ${res.status} - ${res.statusText}`);
-            return res.json();
-        })
+        .then(r => r.ok ? r.json() : Promise.reject(r.status))
         .then(data => {
-            console.log("Champions loaded:", data);
-            championPool  = data;
-            filteredPool  = [...championPool];
-            renderChampionPool(filteredPool);
+            championList = data;
+            filteredPool = [...data];
+            // Once we have our master list, start listening to Firestore
+            startFirestoreListener();
         })
-        .catch(err => {
-            console.error("Failed to load champion data:", err);
-        });
+        .catch(err => console.error('Could not load champions.json', err));
 
-    // 4) Hook up search bar
+    // 4) Hook up search
     const searchInput = document.getElementById('search');
-    if (searchInput) {
-        searchInput.addEventListener('input', function () {
-            const query = this.value.toLowerCase();
-            filteredPool = championPool.filter(champ =>
-                champ.toLowerCase().includes(query)
-            );
-            renderChampionPool(filteredPool);
-        });
-    }
+    searchInput?.addEventListener('input', function() {
+        const q = this.value.toLowerCase();
+        filteredPool = championList.filter(c => c.toLowerCase().includes(q));
+        renderGrid();
+    });
 });
 
-// -- Fallback copy function using a hidden textarea --
-function fallbackCopyText(text, button) {
-    const textarea = document.createElement('textarea');
-    textarea.value = text;
-    // Move off-screen
-    textarea.style.position = 'fixed';
-    textarea.style.top      = '0';
-    textarea.style.left     = '0';
-    textarea.style.opacity  = '0';
-    document.body.appendChild(textarea);
-    textarea.focus();
-    textarea.select();
+// -------------------------
+// Real-time Firestore sync
+// -------------------------
+function startFirestoreListener() {
+    // Unsubscribe old if any
+    unsubscribe?.();
 
-    try {
-        const successful = document.execCommand('copy');
-        console.log('Fallback copy was ' + (successful ? 'successful' : 'unsuccessful'));
-        if (button) {
-            if (successful) {
-                button.innerText = 'Copied!';
-                setTimeout(() => { button.innerText = '📋 Copy ID'; }, 1500);
-            } else {
-                alert('Copy failed — please copy manually.');
-            }
-        }
-    } catch (err) {
-        console.error('Fallback: unable to copy', err);
-        alert('Copy failed — please copy manually.');
-    }
+    unsubscribe = seriesRef.onSnapshot(doc => {
+        if (!doc.exists) return alert('Series not found or was deleted');
 
-    document.body.removeChild(textarea);
+        const data = doc.data();
+        const used = data.usedChampions || [];
+        const step = data.currentStep     || 0;
+
+        // Rebuild available pool & grid
+        filteredPool = championList.filter(c => !used.includes(c));
+        renderGrid();
+
+        // (Optional) You can also render picks/bans into slots here
+        console.log(`🔄 Synced: step=${step}, usedChampions=${used.join(',')}`);
+    }, err => {
+        console.error('Firestore onSnapshot error:', err);
+    });
 }
 
-// -- Render champion buttons --
-function renderChampionPool(list) {
+// -------------------------
+// Render champion grid
+// -------------------------
+function renderGrid() {
     const poolDiv = document.getElementById('champion-pool');
-    if (!poolDiv) {
-        console.error("champion-pool element not found!");
-        return;
-    }
     poolDiv.innerHTML = '';
-    list.forEach(champ => {
+    filteredPool.forEach(champ => {
         const btn = document.createElement('button');
-        btn.title                 = champ;
-        btn.style.backgroundImage = `url('assets/${champ}.jpg')`;
-        btn.style.backgroundSize  = 'cover';
-        btn.style.backgroundPosition = 'center';
-        btn.onclick               = () => pickChampion(champ);
+        btn.title                = champ;
+        btn.style.backgroundImage     = `url('assets/${champ}.jpg')`;
+        btn.style.backgroundSize      = 'cover';
+        btn.style.backgroundPosition  = 'center';
+        btn.onclick              = () => submitPick(champ);
         poolDiv.appendChild(btn);
     });
 }
 
-// -- Handle champion pick --
-function pickChampion(champion) {
-    alert(`You picked ${champion}`);
-    // TODO: integrate with your pick/ban state machine
+// -------------------------
+// Submit a pick/ban to Firestore
+// -------------------------
+function submitPick(champion) {
+    // First get the latest step & confirm in bounds
+    seriesRef.get().then(doc => {
+        const data = doc.data();
+        const step = data.currentStep || 0;
+
+        if (step >= draftSequence.length) {
+            return alert('Draft is already complete.');
+        }
+
+        const { action, team, slot } = draftSequence[step];
+        const entry = {
+            action,
+            team,
+            slot,
+            champion,
+            ts: firebase.firestore.FieldValue.serverTimestamp()
+        };
+
+        // Build batched update
+        const updates = {
+            currentStep:    firebase.firestore.FieldValue.increment(1),
+            usedChampions:  firebase.firestore.FieldValue.arrayUnion(champion)
+        };
+        // Push into picks or bans array
+        updates[action === 'PICK' ? 'picks' : 'bans'] =
+            firebase.firestore.FieldValue.arrayUnion(entry);
+
+        // Atomically update Firestore
+        seriesRef.update(updates)
+            .then(() => console.log(`✓ ${action} ${champion} by ${team} in ${slot}`))
+            .catch(err => console.error('Failed to submit pick/ban', err));
+    });
+}
+
+// -------------------------
+// Copy-ID button helper
+// -------------------------
+function setupCopyButton(gameId) {
+    const btn = document.getElementById('copy-id-btn');
+    if (!btn) return;
+    btn.addEventListener('click', () => {
+        navigator.clipboard?.writeText(gameId)
+            .then(() => {
+                btn.innerText = 'Copied!';
+                setTimeout(() => btn.innerText = '📋 Copy ID', 1500);
+            })
+            .catch(() => alert('Copy failed—please copy manually.'));
+    });
 }
