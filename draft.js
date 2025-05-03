@@ -1,30 +1,69 @@
-// Extract game ID from URL
-const urlParams = new URLSearchParams(window.location.search);
-const gameId = urlParams.get('game');
-document.getElementById('game-id-display').innerText = `Game ID: ${gameId}`;
-
-// Example champion pool
+// Global champion lists
 let championPool = [];
+let filteredPool = [];
 
-fetch('champions.json')
-    .then(res => res.json())
-    .then(data => {
-        championPool = data;
-        renderChampionPool();
-    });
+// Wait until the DOM is fully loaded
+document.addEventListener('DOMContentLoaded', () => {
+    // Extract game ID from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const gameId = urlParams.get('game');
+    const gameIdDisplay = document.getElementById('game-id-display');
 
-function renderChampionPool() {
+    if (gameId && gameIdDisplay) {
+        gameIdDisplay.innerText = `Game ID: ${gameId}`;
+    }
+
+    // Load champions from JSON
+    fetch('champions.json')
+        .then(res => {
+            if (!res.ok) throw new Error(`HTTP ${res.status} - ${res.statusText}`);
+            return res.json();
+        })
+        .then(data => {
+            console.log("Champions loaded:", data);
+            championPool = data;
+            filteredPool = [...championPool];   // initialize filtered list
+            renderChampionPool(filteredPool);
+        })
+        .catch(err => {
+            console.error("Failed to load champion data:", err);
+        });
+
+    // Hook up search bar
+    const searchInput = document.getElementById('search');
+    if (searchInput) {
+        searchInput.addEventListener('input', function () {
+            const query = this.value.toLowerCase();
+            filteredPool = championPool.filter(champ =>
+                champ.toLowerCase().includes(query)
+            );
+            renderChampionPool(filteredPool);
+        });
+    }
+});
+
+// Render champion buttons
+function renderChampionPool(list) {
     const poolDiv = document.getElementById('champion-pool');
+    if (!poolDiv) {
+        console.error("champion-pool element not found!");
+        return;
+    }
+
     poolDiv.innerHTML = '';
-    championPool.forEach(champ => {
+    list.forEach(champ => {
         const btn = document.createElement('button');
-        btn.innerText = champ;
+        btn.style.backgroundImage = `url('assets/${champ}.jpg')`;
+        btn.style.backgroundSize     = 'cover';
+        btn.style.backgroundPosition = 'center';
+        btn.title = champ;            // tooltip on hover
         btn.onclick = () => pickChampion(champ);
         poolDiv.appendChild(btn);
     });
 }
 
+// Handle champion pick
 function pickChampion(champion) {
-    alert(`You picked ${champion}!`);
-    // Add logic to track and update picks/bans here
+    alert(`You picked ${champion}`);
+    // TODO: integrate with your pick/ban state machine
 }
