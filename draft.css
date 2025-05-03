@@ -1,0 +1,105 @@
+body {
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    background-color: #2c2f3a;
+    color: white;
+}
+
+.draft-wrapper {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    height: 100vh;
+    padding: 20px;
+    gap: 20px;
+}
+
+.team-column {
+    width: 15%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.team-column h2 {
+    font-size: 1.5rem;
+    margin-bottom: 10px;
+}
+
+.slots .slot {
+    width: 100%;
+    background: #101319;
+    border: 2px solid #1e3c72;
+    color: white;
+    padding: 16px;
+    text-align: center;
+    margin: 10px 0;
+    border-radius: 10px;
+    font-weight: bold;
+}
+
+.red-team .slot {
+    border-color: #c0392b;
+}
+
+.center-draft {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+#search {
+    width: 60%;
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 8px;
+    border: none;
+}
+
+.champion-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, 60px);
+    gap: 10px;
+    justify-content: center;
+    padding: 10px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.champion-grid button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    width: 60px;
+    height: 60px;
+    background-size: cover;
+    background-position: center;
+    border-radius: 6px;
+    outline: 2px solid #444;
+}
+
+.draft-order {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.draft-order div {
+    background: #101319;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-weight: bold;
+}
+
+.ready-btn {
+    background-color: #f39c12;
+    border: none;
+    padding: 10px 20px;
+    font-weight: bold;
+    border-radius: 8px;
+    color: #000;
+    cursor: pointer;
+}

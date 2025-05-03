@@ -1,0 +1,45 @@
+/* Reset and base styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', sans-serif;
+    background: linear-gradient(to right, #1e3c72, #2a5298);
+    color: #fff;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Title styling */
+h1 {
+    font-size: 2.5rem;
+    margin-bottom: 40px;
+    text-align: center;
+    text-shadow: 1px 1px 4px rgba(0,0,0,0.5);
+}
+
+/* Button styles */
+button {
+    background-color: #ffffff;
+    color: #1e3c72;
+    font-size: 1rem;
+    font-weight: bold;
+    padding: 12px 24px;
+    margin: 10px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.3s, transform 0.2s;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+}
+
+button:hover {
+    background-color: #e6e6e6;
+    transform: scale(1.05);
+}
