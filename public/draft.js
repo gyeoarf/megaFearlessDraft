@@ -45,22 +45,19 @@ document.addEventListener('DOMContentLoaded', () => {
 // Render champion buttons
 function renderChampionPool(list) {
     const poolDiv = document.getElementById('champion-pool');
-    if (!poolDiv) {
-        console.error("champion-pool element not found!");
-        return;
-    }
-
     poolDiv.innerHTML = '';
     list.forEach(champ => {
         const btn = document.createElement('button');
+        btn.title = champ;
+        // Use exact-case filename
         btn.style.backgroundImage = `url('assets/${champ}.jpg')`;
         btn.style.backgroundSize     = 'cover';
         btn.style.backgroundPosition = 'center';
-        btn.title = champ;            // tooltip on hover
         btn.onclick = () => pickChampion(champ);
         poolDiv.appendChild(btn);
     });
 }
+
 
 // Handle champion pick
 function pickChampion(champion) {
