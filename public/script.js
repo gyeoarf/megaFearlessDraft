@@ -1,4 +1,4 @@
-// Generate a random alphanumeric game ID
+// Utilities
 function generateGameId(length = 6) {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let id = '';
@@ -8,28 +8,50 @@ function generateGameId(length = 6) {
     return id;
 }
 
-// Called when "Create a Fearless series" is clicked
+// Create a new Firestore series document, then redirect
 function startNewGame() {
     const gameId = generateGameId();
-    alert(`New game created!\nGame ID: ${gameId}`);
+    const seriesRef = db.collection('series').doc(gameId);
 
-    // Redirect to draft page with game ID in URL
-    window.location.href = `draft.html?game=${gameId}`;
+    seriesRef.set({
+        currentStep:   0,
+        usedChampions: [],
+        picks:         [],
+        bans:          [],
+        createdAt:     firebase.firestore.FieldValue.serverTimestamp()
+    })
+        .then(() => {
+            window.location.href = `draft.html?game=${gameId}`;
+        })
+        .catch(err => {
+            console.error('Error creating series:', err);
+            alert('Failed to create series. See console for details.');
+        });
 }
 
-// Called when "Join a Fearless series" is clicked
+// Prompt for a code, verify it exists, then redirect
 function joinGame() {
-    const gameId = prompt('Enter the Game ID to join:');
+    const input = prompt('Enter the Game ID to join:');
+    if (!input) return;
 
-    if (!gameId || gameId.trim() === '') {
-        alert('You must enter a valid game ID.');
-        return;
-    }
+    const code = input.trim().toUpperCase();
+    const seriesRef = db.collection('series').doc(code);
 
-    // Normalize input
-    const cleanId = gameId.trim().toUpperCase();
-
-    // Redirect to draft page with game ID
-    window.location.href = `draft.html?game=${cleanId}`;
+    seriesRef.get()
+        .then(doc => {
+            if (!doc.exists) {
+                alert(`No Fearless series found with code "${code}".`);
+            } else {
+                window.location.href = `draft.html?game=${code}`;
+            }
+        })
+        .catch(err => {
+            console.error('Error fetching series:', err);
+            alert('Failed to join series. See console for details.');
+        });
 }
 
+// Alias for joinGame (if you want a separate flow)
+function loadDraft() {
+    joinGame();
+}

@@ -4,6 +4,28 @@
   <meta charset="UTF-8">
   <title>Mega Fearless Drafter – Menu</title>
   <link rel="stylesheet" href="style.css">
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+  <script>
+    // ← REPLACE this entire object with YOUR firebaseConfig snippet
+    const firebaseConfig = {
+      apiKey:            "AIza…",
+      authDomain:        "fearless-draft-5c74e.firebaseapp.com",
+      projectId:         "fearless-draft-5c74e",
+      storageBucket:     "fearless-draft-5c74e.appspot.com",
+      messagingSenderId: "1091793474971",
+      appId:             "1:1091793474971:web:abcdef123456"
+    };
+    // Initialize Firebase & Firestore
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    // If running on localhost, redirect Firestore to the emulator:
+    if (window.location.hostname === 'localhost') {
+      db.useEmulator('localhost', 8080);
+    }
+  </script>
 </head>
 <body>
 <h1>Fearless Draft (Series)</h1>
