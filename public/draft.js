@@ -53,7 +53,7 @@ function renderChampionPool(list) {
     poolDiv.innerHTML = '';
     list.forEach(champ => {
         const btn = document.createElement('button');
-        btn.style.backgroundImage = `url('assets/${champ}.jpg')`;
+        btn.style.backgroundImage = `url('assets/${champ.toLowerCase()}.jpg')`;
         btn.style.backgroundSize     = 'cover';
         btn.style.backgroundPosition = 'center';
         btn.title = champ;            // tooltip on hover
